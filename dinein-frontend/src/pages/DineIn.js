@@ -7,7 +7,7 @@ const DineIn = () => {
   const [categories, setCategories] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredCategories, setFilteredCategories] = useState([]);
-  const { cart } = useCart();
+  const { cart, setCart } = useCart();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const tableNumber = searchParams.get("table") || "Y?";
@@ -36,8 +36,24 @@ const DineIn = () => {
     );
   }, [searchQuery, categories]);
 
-  const totalAmount = cart.reduce((total, item) => total + item.price * item.quantity, 0);
-  const totalItems = cart.reduce((count, item) => count + item.quantity, 0);
+  const handleQuantityChange = (item, change) => {
+    if (!setCart) {
+      console.error("setCart is undefined! Make sure CartContext is correctly implemented.");
+      return;
+    }
+
+    const newQuantity = item.quantity + change;
+
+    if (newQuantity <= 0) {
+      setCart(cart.filter((cartItem) => cartItem.id !== item.id));
+    } else {
+      setCart(
+        cart.map((cartItem) =>
+          cartItem.id === item.id ? { ...cartItem, quantity: newQuantity } : cartItem
+        )
+      );
+    }
+  };
 
   const handleGetOTP = async () => {
     if (!customerName || !mobileNumber) {
@@ -65,6 +81,9 @@ const DineIn = () => {
       alert("Something went wrong!");
     }
   };
+
+  // ✅ Calculate total price
+  const totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   return (
     <div className={`p-4 ${isOrderSummaryOpen ? "overflow-hidden" : ""}`}>
@@ -94,7 +113,7 @@ const DineIn = () => {
 
       {cart.length > 0 && (
         <div className="fixed bottom-0 left-0 w-full bg-yellow-500 text-white p-4 flex justify-between items-center shadow-md">
-          <span className="text-sm font-medium">{totalItems} items in cart</span>
+          <span className="text-sm font-medium">{cart.length} items in cart</span>
           <button className="bg-black px-4 py-2 rounded text-white text-sm flex items-center" onClick={() => setIsOrderSummaryOpen(true)}>
             View Order
           </button>
@@ -112,15 +131,22 @@ const DineIn = () => {
 
             <h2 className="text-lg font-bold mb-2">Your Order Summary</h2>
             {cart.map((item) => (
-              <div key={item.id} className="flex justify-between p-2 border-b">
+              <div key={item.id} className="flex justify-between items-center p-2 border-b">
                 <span>{item.name}</span>
-                <span>₹{item.price * item.quantity}</span>
+                <div className="flex items-center">
+                  <span className="text-sm font-semibold mr-4">₹{item.price * item.quantity}</span>
+                  <button className="bg-gray-300 px-2 py-1 rounded" onClick={() => handleQuantityChange(item, -1)}>-</button>
+                  <span className="mx-2">{item.quantity}</span>
+                  <button className="bg-gray-300 px-2 py-1 rounded" onClick={() => handleQuantityChange(item, 1)}>+</button>
+                </div>
               </div>
             ))}
 
-            <div className="text-lg font-bold mt-2">Total: ₹{totalAmount}</div>
-
-            <textarea className="w-full p-2 mt-2 border rounded" placeholder="Enter any additional information about your order."></textarea>
+            {/* ✅ Display total price */}
+            <div className="flex justify-between items-center font-bold text-lg mt-4">
+              <span>Total Amount:</span>
+              <span>₹{totalPrice}</span>
+            </div>
 
             <button className="mt-3 w-full bg-black text-white py-2 rounded-md" onClick={() => setIsCustomerInfoOpen(true)}>
               Place Order

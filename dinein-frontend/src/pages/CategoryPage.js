@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import SearchBar from "../components/SearchBar";
-import { FaArrowLeft } from "react-icons/fa";
+import { FaArrowLeft, FaUtensils } from "react-icons/fa";
 
 const CategoryPage = () => {
   const { categoryId } = useParams();
@@ -18,6 +18,8 @@ const CategoryPage = () => {
   const [isCustomerInfoOpen, setIsCustomerInfoOpen] = useState(false);
   const [customerName, setCustomerName] = useState("");
   const [mobileNumber, setMobileNumber] = useState("");
+  const [isCategoryPopupOpen, setIsCategoryPopupOpen] = useState(false);
+  const [categories, setCategories] = useState([]);
 
   useEffect(() => {
     fetch(`http://localhost:5000/api/categories/${categoryId}`)
@@ -43,6 +45,15 @@ const CategoryPage = () => {
         : dishes
     );
   }, [searchQuery, dishes]);
+
+  useEffect(() => {
+    if (isCategoryPopupOpen) {
+      fetch("http://localhost:5000/api/categories")
+        .then((response) => response.json())
+        .then((data) => setCategories(data))
+        .catch((error) => console.error("Error fetching categories:", error));
+    }
+  }, [isCategoryPopupOpen]);
 
   const totalAmount = cart.reduce((total, item) => total + item.price * item.quantity, 0);
   const totalItems = cart.reduce((count, item) => count + item.quantity, 0);
@@ -125,6 +136,42 @@ const CategoryPage = () => {
                   Add +
                 </button>
               )}
+              {/* Category Selection Popup */}
+              {isCategoryPopupOpen && (
+                <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center">
+                  <div className="bg-white w-80 p-4 rounded-lg shadow-lg">
+                    <div className="flex justify-between items-center mb-4">
+                      <h2 className="text-lg font-bold">Select Category</h2>
+                      <button
+                        className="text-black text-xl font-bold"
+                        onClick={() => setIsCategoryPopupOpen(false)}
+                      >
+                        ✖
+                      </button>
+                    </div>
+                    <ul>
+                      {categories.map((cat) => (
+                        <li
+                          key={cat.id}
+                          className="p-2 border-b cursor-pointer hover:bg-gray-200"
+                          onClick={() => {
+                            navigate(`/category/${cat.id}?table=${tableNumber}`);
+                            setIsCategoryPopupOpen(false);
+                          }}
+                        >
+                          {cat.name}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+              <button
+                className="fixed bottom-20 right-6 bg-black text-white p-4 rounded-full shadow-lg"
+                onClick={() => setIsCategoryPopupOpen(true)}
+              >
+                <FaUtensils className="text-2xl" />
+              </button>
             </div>
           );
         })}
@@ -152,9 +199,14 @@ const CategoryPage = () => {
 
             <h2 className="text-lg font-bold mb-2">Your Order Summary</h2>
             {cart.map((item) => (
-              <div key={item.id} className="flex justify-between p-2 border-b">
+              <div key={item.id} className="flex justify-between items-center p-2 border-b">
                 <span>{item.name}</span>
-                <span>₹{item.price * item.quantity}</span>
+                <div className="flex items-center">
+                  <span className="text-sm font-semibold mr-4">₹{item.price * item.quantity}</span>
+                  <button className="bg-gray-300 px-2 py-1 rounded" onClick={() => removeFromCart(item)}>-</button>
+                  <span className="mx-2">{item.quantity}</span>
+                  <button className="bg-gray-300 px-2 py-1 rounded" onClick={() => addToCart(item)}>+</button>
+                </div>
               </div>
             ))}
 
